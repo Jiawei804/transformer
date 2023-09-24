@@ -73,19 +73,19 @@ EPOCHS = 10							# 训练轮数
 
 #### position embedding
 
-![position_embedding](E:/Python_objects/github/transformer/position_embedding.png)
+![position_embedding](./position_embedding.png)
 
 #### warm-up
 
-![warm-up](E:/Python_objects/github/transformer/warm-up.png)
+![warm-up](./warm-up.png)
 
 #### 机器翻译评价指标-BLEU
 
 > 一下代码能够帮你快速理解bleu的工作原理，更详细的原理请参考文献。
 
-公式如下：
-$$
-bleu = exp^{∑ weight∗logP}∗惩罚系数
+公式如下：  
+$$  
+bleu = exp^{∑ weight∗logP}∗惩罚系数  
 $$
 
 
