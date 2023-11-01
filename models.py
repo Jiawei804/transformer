@@ -202,3 +202,38 @@ class DecoderModel(keras.layers.Layer):
 
         return x, attention_weights
 
+
+if __name__ == '__main__':
+    # encoder测试
+    sample_encoder_layer = EncoderLayer(512, 8, 2048)
+    sample_input = tf.random.uniform((64, 50, 512))  # 因为做了残差连接，所以x的形状必须和mha输出形状一致
+    sample_output = sample_encoder_layer(sample_input, False, None)
+    print(f"encoder_layer output: {sample_output.shape}")
+
+    sample_encoder_model = EncoderModel(2, 8500, 40,
+                                        512, 8, 2048)
+    sample_encoder_model_input = tf.random.uniform((64, 37))
+    sample_encoder_model_output = sample_encoder_model(
+        sample_encoder_model_input, False, encoder_padding_mask=None)
+    print(f"encoder_model output: {sample_encoder_model_output.shape}")
+
+    print('-' * 50)
+    # decoder测试
+    sample_decoder_layer = DecoderLayer(512, 8, 2048)
+    sample_decoder_input = tf.random.uniform((64, 60, 512))
+    sample_decoder_output, sample_decoder_attn_weights1, sample_decoder_attn_weights2 = sample_decoder_layer(
+        sample_decoder_input, sample_output, False, None, None)
+    print(f"decoder_layer output: {sample_decoder_output.shape}")
+    print(sample_decoder_output.shape)
+    print(f"decoder_layer_attn_weights1 output: {sample_decoder_attn_weights1.shape}")  # 最后一维60是和x的维度一致的
+    print(f"decoder_layer_attn_weights2 output: {sample_decoder_attn_weights2.shape}")  # 最后一维60是和x的维度相关的
+
+    sample_decoder_model = DecoderModel(2, 8000, 40,
+                                        512, 8, 2048)
+    sample_decoder_model_input = tf.random.uniform((64, 35))
+    sample_decoder_model_output, sample_decoder_model_att = sample_decoder_model(
+        sample_decoder_model_input,
+        sample_encoder_model_output,  # 注意这里是encoder的output
+        training=False, decoder_mask=None,
+        encoder_decoder_padding_mask=None)
+    print(f"decoder_model output: {sample_decoder_model_output.shape}")

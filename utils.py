@@ -64,7 +64,7 @@ def create_padding_mask(batch_data):
 # 对应的logits也就变成了一个超级小的数。然后在计算softmax的时候，
 # 一个超级小的数的指数会无限接近与0。也就是它对应的attention的权重就是0了,
 def create_look_ahead_mask(size):
-    mask = tf.linalg.band_part(tf.ones((size, size)), 0, -1) # 上三角行列式
+    mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)    # 这里1-下三角矩阵，对角线元素也为0
     return mask
 
 
@@ -263,6 +263,7 @@ def bleu_score(val_examples,pt_tokenizer, en_tokenizer, evaluate):
 if __name__=='__main__':
     from settings import *
 
+
     # 测试：热力图展示位置编码
     def plot_position_embedding(position_embedding):
         plt.pcolormesh(position_embedding[0, ::-1, :], cmap='RdBu')
@@ -283,3 +284,46 @@ if __name__=='__main__':
 
     temp_learning_rate_schedule = CustomSchedule(D_MODEL)
     plot_learning_rate_schedule(temp_learning_rate_schedule)
+
+    # 测试：查看掩码
+    # 设置3x5矩阵，0都是padding，是零的得到的都是1，其他的都是零
+    x = tf.constant([[7, 6, 0, 0, 0], [1, 2, 3, 0, 0], [4, 5, 0, 0, 0]])
+    print(create_padding_mask(x))
+    print(create_look_ahead_mask(5))
+
+
+    # 测试：缩放点积注意力
+    # 测试
+    def print_scaled_dot_product_attention(q, k, v):
+        temp_out, temp_att = scaled_dot_product_attention(q, k, v, None)
+        print("Attention weights are:")
+        print(temp_att)
+        print("Output is:")
+        print(temp_out)
+
+
+    # 定义一个测试的Q，K，V
+    temp_q1 = tf.constant([[0, 10, 0]], dtype=tf.float32)  # (1, 3)
+    temp_k = tf.constant([[10, 0, 0],
+                          [0, 10, 0],
+                          [0, 0, 10],
+                          [0, 0, 10]], dtype=tf.float32)  # (4, 3)
+    temp_v = tf.constant([[1, 0],
+                          [10, 0],
+                          [100, 5],
+                          [1000, 6]], dtype=tf.float32)  # (4, 2)
+    print_scaled_dot_product_attention(temp_q1, temp_k, temp_v)
+
+    # 测试：多头注意力
+    x = tf.random.uniform((1, 40, 256))  # (batch_size, seq_len_q, dim)
+    temp_mha = MultiHeadAttention(d_model=512, num_heads=8)
+    # 开始计算，把y既当q，又当k，v
+    output, attn = temp_mha(x, x, x, mask=None)
+    print(f"MultiHeadAttention output: {output.shape}")  # 输出的尺寸，和x的尺寸一致
+    print(f"MultiHeadAttention weights: {attn.shape}")  # 注意力的尺寸
+
+    # 测试：前馈神经网络
+    sample_ffn = feed_forward_network(512, 2048)
+    # 给一个输入测试
+    print(f"ffn output: {sample_ffn(tf.random.uniform((64, 50, 512))).shape}")
+

@@ -3,9 +3,9 @@ from models import EncoderModel, DecoderModel
 
 
 class Transformer(keras.Model):
-    def __init__(self, num_layers, d_model, num_heads, dff, input_vocab_size,
-                 target_vocab_size, max_length, rate):
-        super().__init__()
+    def __init__(self, num_layers, input_vocab_size,
+                 target_vocab_size, max_length, d_model, num_heads, dff, rate=0.1):
+        super(Transformer, self).__init__()
         self.encoder = EncoderModel(
             num_layers, input_vocab_size, max_length,
                                     d_model, num_heads, dff, rate)
@@ -20,21 +20,21 @@ class Transformer(keras.Model):
              decoder_mask, encoder_decoder_padding_mask):
         # inp.shape: (batch_size, inp_seq_len)
         # encoding_output.shape: (batch_size, inp_seq_len, d_model)
-        encoding_output = self.encoder(
+        encoding_outputs = self.encoder(
             inp, training, encoder_padding_mask)
 
         # decoding_output.shape: (batch_size, tar_seq_len, d_model)
-        decoding_output, attention_weights = self.decoder(
-            tar, encoding_output, training,
+        decoding_outputs, attention_weights = self.decoder(
+            tar, encoding_outputs, training,
             decoder_mask, encoder_decoder_padding_mask)
 
-        # prediction.shape: (batch_size, tar_seq_len, target_vocab_size)
-        prediction = self.final_layer(decoding_output)
+        # predictions.shape: (batch_size, tar_seq_len, target_vocab_size)
+        predictions = self.final_layer(decoding_outputs)
 
-        return prediction, attention_weights
+        return predictions, attention_weights
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     import tensorflow as tf
     # 测试
     sample_transformer = Transformer(4, 128, 8, 512,

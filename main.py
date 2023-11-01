@@ -28,7 +28,7 @@ en_tokenizer = tfds.deprecated.text.SubwordTextEncoder.build_from_corpus(
 # 词表大小加2
 INPUT_VOCAB_SIZE = pt_tokenizer.vocab_size + 2
 TARGET_VOCAB_SIZE = en_tokenizer.vocab_size + 2
-print(INPUT_VOCAB_SIZE, TARGET_VOCAB_SIZE)
+print(f"INPUT_VOCAB_SIZE: {INPUT_VOCAB_SIZE}, TARGET_VOCAB_SIZE: {TARGET_VOCAB_SIZE}")
 
 # 将两种语言的文本转化为subword形式，[pt_tokenizer.vocab_size] 和 [pt_tokenizer.cocab_size+1]
 # 分别表示一句话的开始标记和结束标记，<start>,<end>
@@ -90,12 +90,12 @@ def create_masks(inp, tar):
 
 transformer = Transformer(
     NUM_LAYERS, # encoder和decoder的层数
-    D_MODEL, # 模型的维度
-    NUM_HEADS, # 多头注意力的头数
-    DFF, # feed forward 层的神经元数
     INPUT_VOCAB_SIZE, # 输入词表的大小
     TARGET_VOCAB_SIZE, # 输出词表的大小
     MAX_LENGTH, # 最大长度
+    D_MODEL, # 模型的维度
+    NUM_HEADS, # 多头注意力的头数
+    DFF, # feed forward 层的神经元数
     DROPOUT_RATE # dropout比例
 )
 
@@ -107,7 +107,7 @@ optimizer = keras.optimizers.Adam(learning_rate,
                                   epsilon = 1e-9)
 
 # 设置检查点，如果训练过程中断不至于从头训练
-checkpoint_dir = 'checkpoints'
+checkpoint_dir = './checkpoints'
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -163,29 +163,29 @@ def train_step(inp, tar):
 
 
 # 如果加载成功，是<tensorflow.python.checkpoint.checkpoint.CheckpointLoadStatus，不成功有init
-checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
-
-for epoch in range(EPOCHS):
-    start = time.time()
-    # reset后就会从零开始累积
-    train_loss.reset_states()
-    train_accuracy.reset_states()
-
-    for (batch, (inp, tar)) in enumerate(train_dataset):
-
-        train_step(inp, tar)
-
-        if batch % 100 == 0:
-            print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-                epoch+1, batch, train_loss.result(),
-                train_accuracy.result()
-            ))
-
-    print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(
-        epoch + 1, train_loss.result(), train_accuracy.result()))
-    print('Time take for 1 epoch: {} secs\n'.format(
-        time.time() - start))
-    checkpoint.save(file_prefix=checkpoint_prefix)
+status = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
+print(status)
+# for epoch in range(EPOCHS):
+#     start = time.time()
+#     # reset后就会从零开始累积
+#     train_loss.reset_states()
+#     train_accuracy.reset_states()
+#
+#     for (batch, (inp, tar)) in enumerate(train_dataset):
+#
+#         train_step(inp, tar)
+#
+#         if batch % 100 == 0:
+#             print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
+#                 epoch+1, batch, train_loss.result(),
+#                 train_accuracy.result()
+#             ))
+#
+#     print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(
+#         epoch + 1, train_loss.result(), train_accuracy.result()))
+#     print('Time take for 1 epoch: {} secs\n'.format(
+#         time.time() - start))
+#     checkpoint.save(file_prefix=checkpoint_prefix)
 
 # loss是一个正常的指标，而accuracy只是机器翻译的一个参考指标，可以看趋势，业界并不以准确率作为模型好坏的参考指标
 
@@ -201,7 +201,7 @@ transformer可以并行训练，因为它的每一层都是独立的，可以并
 # 翻译函数，输入葡萄牙语，输出英语
 def evaluate(inp_sentence):
     # 输入的句子需要经过编码
-    input_id_sentence = [pt_tokenizer.vocab_size] + pt_tokenizer.encode(inp_sentence) + [pt_tokenizer.vocab_size + 1]
+    input_id_sentence = ([pt_tokenizer.vocab_size] + pt_tokenizer.encode(inp_sentence) + [pt_tokenizer.vocab_size + 1])
     # encoder的输入是一个batch，所以需要给它增加一个维度
     # encoder_input.shape: (1, input_sentence_length)
     encoder_input = tf.expand_dims(input_id_sentence, 0)
@@ -221,12 +221,12 @@ def evaluate(inp_sentence):
             encoder_padding_mask,
             decoder_mask,
             encoder_decoder_padding_mask)
-        # predictions.shape: (batch_size, target_vocab_size)
+        # prediction.shape: (batch_size, target_vocab_size)
         # 每次预测最后一个词，所以取最后一个词
         # print(predictions.shape)
-        predictions = predictions[:, -1, :] # 取最后一个词
+        prediction = predictions[:, -1, :] # 取最后一个词
         # 预测值是对每个词的概率分布，取概率最大的那个词
-        predicted_id = tf.cast(tf.argmax(predictions, axis=-1), tf.int32)
+        predicted_id = tf.cast(tf.argmax(prediction, axis=-1), tf.int32)
 
         # 如果predicted_id是end token，就返回结果
         if tf.equal(predicted_id, en_tokenizer.vocab_size + 1):
@@ -240,11 +240,11 @@ def evaluate(inp_sentence):
 
 
 # 翻译 如果layer_name不为空，就会画出attention图
-def translate(input_sentence, layer_name = ''):
+def translate(input_sentence, layer_name=''):
     result, attention_weights = evaluate(input_sentence)
 
-    predicted_sentence = en_tokenizer.decode([i for i in result
-                                              if i < en_tokenizer.vocab_size])
+    predicted_sentence = en_tokenizer.decode(
+        [i for i in result if i < en_tokenizer.vocab_size])
     print("Input: {}".format(input_sentence))
     print("Predicted translation: {}".format(predicted_sentence))
     if layer_name:
@@ -255,7 +255,7 @@ def translate(input_sentence, layer_name = ''):
 
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     translate(
         'isto é minha vida')
     # 展示翻译效果，并绘制热力图
@@ -263,5 +263,5 @@ if __name__=='__main__':
     #     'isto é minha vida',  # This is my life.
     #     layer_name='decoder_layer4_att2')
 
-    bleu = bleu_score(val_examples, pt_tokenizer, en_tokenizer, evaluate)
-    print('bleu score: {:.4f}'.format(bleu))
+    # bleu = bleu_score(val_examples, pt_tokenizer, en_tokenizer, evaluate)
+    # print('bleu score: {:.4f}'.format(bleu))
