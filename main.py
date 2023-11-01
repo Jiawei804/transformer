@@ -1,5 +1,5 @@
 import os
-from datetime import time
+import time
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from tensorflow import keras
@@ -107,7 +107,7 @@ optimizer = keras.optimizers.Adam(learning_rate,
                                   epsilon = 1e-9)
 
 # 设置检查点，如果训练过程中断不至于从头训练
-checkpoint_dir = './checkpoints'
+checkpoint_dir = './py_checkpoints'
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -165,27 +165,28 @@ def train_step(inp, tar):
 # 如果加载成功，是<tensorflow.python.checkpoint.checkpoint.CheckpointLoadStatus，不成功有init
 status = checkpoint.restore(tf.train.latest_checkpoint(checkpoint_dir))
 print(status)
-# for epoch in range(EPOCHS):
-#     start = time.time()
-#     # reset后就会从零开始累积
-#     train_loss.reset_states()
-#     train_accuracy.reset_states()
-#
-#     for (batch, (inp, tar)) in enumerate(train_dataset):
-#
-#         train_step(inp, tar)
-#
-#         if batch % 100 == 0:
-#             print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
-#                 epoch+1, batch, train_loss.result(),
-#                 train_accuracy.result()
-#             ))
-#
-#     print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(
-#         epoch + 1, train_loss.result(), train_accuracy.result()))
-#     print('Time take for 1 epoch: {} secs\n'.format(
-#         time.time() - start))
-#     checkpoint.save(file_prefix=checkpoint_prefix)
+
+for epoch in range(EPOCHS):
+    start = time.time()
+    # reset后就会从零开始累积
+    train_loss.reset_states()
+    train_accuracy.reset_states()
+
+    for (batch, (inp, tar)) in enumerate(train_dataset):
+
+        train_step(inp, tar)
+
+        if batch % 100 == 0:
+            print('Epoch {} Batch {} Loss {:.4f} Accuracy {:.4f}'.format(
+                epoch+1, batch, train_loss.result(),
+                train_accuracy.result()
+            ))
+
+    print('Epoch {} Loss {:.4f} Accuracy {:.4f}'.format(
+        epoch + 1, train_loss.result(), train_accuracy.result()))
+    print('Time take for 1 epoch: {} secs\n'.format(
+        time.time() - start))
+    checkpoint.save(file_prefix=checkpoint_prefix)
 
 # loss是一个正常的指标，而accuracy只是机器翻译的一个参考指标，可以看趋势，业界并不以准确率作为模型好坏的参考指标
 

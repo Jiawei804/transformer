@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from nltk.translate.bleu_score import sentence_bleu
-from  tensorflow import keras
-
+from tensorflow import keras
 
 
 # 位置编码
@@ -15,8 +14,9 @@ from  tensorflow import keras
 # d_model: 模型维度, d_model.shape = (1,1)
 def get_angles(pos, i, d_model):
     angles = 1 / np.power(10000,
-                                (2*(i//2)) / np.float32(d_model))
+                          (2 * (i // 2)) / np.float32(d_model))
     return pos * angles
+
 
 # 计算位置编码
 def get_position_embedding(sentence_len, d_model):
@@ -24,8 +24,8 @@ def get_position_embedding(sentence_len, d_model):
     # pos是0到39，词的位置，i从0到511，和d_model相等，是设置的超参数
     # 对于长度相等的句子位置编码是一样的
     # angle_rads.shape = (sentence_len, 512)
-    angle_rads = get_angles(np.arange(sentence_len)[:,np.newaxis],
-                            np.arange(d_model)[np.newaxis,:],
+    angle_rads = get_angles(np.arange(sentence_len)[:, np.newaxis],
+                            np.arange(d_model)[np.newaxis, :],
                             d_model)
     sines = np.sin(angle_rads[:, 0::2])
     cosines = np.cos(angle_rads[:, 1::2])
@@ -33,10 +33,9 @@ def get_position_embedding(sentence_len, d_model):
     # 拼接成位置编码
     position_embedding = np.concatenate([sines, cosines], axis=-1)
     # 进行维度扩展，为了符合后续输入的要求，[sentence_len, d_model] -> [1, sentence_len, d_model]
-    position_embedding = position_embedding[np.newaxis,:]
+    position_embedding = position_embedding[np.newaxis, :]
     # 变为float32类型，模型输入需要
     return tf.cast(position_embedding, dtype=tf.float32)
-
 
 
 # 设置掩码
@@ -49,6 +48,7 @@ def create_padding_mask(batch_data):
     """
     padding_mask = tf.cast(tf.math.equal(batch_data, 0), dtype=tf.float32)
     return padding_mask[:, tf.newaxis, tf.newaxis, :]
+
 
 # 2.decoder mask
 # 第一个位置代表第一个单词和自己的attention，第二位置是第二个单词和第一个单词的attention
@@ -64,7 +64,7 @@ def create_padding_mask(batch_data):
 # 对应的logits也就变成了一个超级小的数。然后在计算softmax的时候，
 # 一个超级小的数的指数会无限接近与0。也就是它对应的attention的权重就是0了,
 def create_look_ahead_mask(size):
-    mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)    # 这里1-下三角矩阵，对角线元素也为0
+    mask = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)  # 这里1-下三角矩阵，对角线元素也为0
     return mask
 
 
@@ -97,10 +97,11 @@ def scaled_dot_product_attention(q, k, v, mask=None):
     # scaled_attention_logits.shape = (seq_len_q, seq_len_k)
     # attention_weights.shape = (seq_len_q, seq_len_k)
     attention_weights = tf.nn.softmax(
-                                    scaled_attention_logits, axis=-1)
+        scaled_attention_logits, axis=-1)
     output = tf.matmul(attention_weights, v)
 
     return output, attention_weights
+
 
 # 多头注意力
 class MultiHeadAttention(keras.layers.Layer):
@@ -118,6 +119,7 @@ class MultiHeadAttention(keras.layers.Layer):
     实战中技巧: q乘以W得到一个大的Q，然后分割为多个小q，拿每一个小q去做缩放点积
     q -> Wq -> Q -> split -> q0, q1, q2...
     """
+
     def __init__(self, d_model, num_heads):
         super().__init__()
         self.num_heads = num_heads
@@ -125,7 +127,7 @@ class MultiHeadAttention(keras.layers.Layer):
         assert self.d_model % self.num_heads == 0
 
         # 多头注意力拆分成多个缩放点积注意力
-        self.depth =self.d_model // self.num_heads
+        self.depth = self.d_model // self.num_heads
         # 构造多头注意力所需要的层
         # 神经元个数是512, 这里传入的d_model就是512
         self.WQ = keras.layers.Dense(self.d_model)
@@ -145,7 +147,7 @@ class MultiHeadAttention(keras.layers.Layer):
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def call(self, q, k, v, mask):
-        batch_size = tf.shape(q)[0] # 形状的第0维就是batch_size
+        batch_size = tf.shape(q)[0]  # 形状的第0维就是batch_size
         # 经过Q K V变化
         q = self.WQ(q)
         k = self.WK(k)
@@ -163,8 +165,7 @@ class MultiHeadAttention(keras.layers.Layer):
         # 做轴交换，还原到原来的形状
         # 在transpose之前，scaled_attention_outputs.shape: (batch_size, num_heads, seq_len_v, depth)
         scaled_attention_outputs = tf.transpose(
-                                        scaled_attention_outputs,perm = [0, 2, 1, 3])
-
+            scaled_attention_outputs, perm=[0, 2, 1, 3])
 
         # 合并计算出的8个缩放点积注意力
         # scaled_attention_outputs.shape: (batch_size, seq_len_v, num_heads, depth)
@@ -199,11 +200,10 @@ class CustomSchedule(keras.optimizers.schedules.LearningRateSchedule):
         self.warmup_steps = warmup_steps
 
     def __call__(self, step):
-
         arg1 = tf.math.rsqrt(step)
         arg2 = step * (self.warmup_steps ** -1.5)
 
-        return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1,arg2)
+        return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1, arg2)
 
 
 # 图像展示encoder和decoder融合时的attention
@@ -241,7 +241,7 @@ def plot_encoder_decoder_attention(attention, input_sentence,
 
 
 # 评估模型，使用bleu指标，微软的nltk框架
-def bleu_score(val_examples,pt_tokenizer, en_tokenizer, evaluate):
+def bleu_score(val_examples, pt_tokenizer, en_tokenizer, evaluate):
     total_bleu = 0.0
     for pt_val, en_val in val_examples:
         if len(pt_tokenizer.encode(pt_val.numpy())) > 38 or len(en_tokenizer.encode(en_val.numpy())) > 38:
@@ -252,15 +252,13 @@ def bleu_score(val_examples,pt_tokenizer, en_tokenizer, evaluate):
         bleu = sentence_bleu(
             [en_val.numpy().decode('utf8').split(' ')],
             predicted_sentence.split(' '),
-            weights=(0.25, 0.25, 0.25, 0.25)) # weights是四个指标的权重，即1-gram,2-gram,3-gram,4-gram
+            weights=(0.25, 0.25, 0.25, 0.25))  # weights是四个指标的权重，即1-gram,2-gram,3-gram,4-gram
         total_bleu += bleu
 
     return total_bleu / len(val_examples)
 
 
-
-
-if __name__=='__main__':
+if __name__ == '__main__':
     from settings import *
 
 
@@ -272,8 +270,10 @@ if __name__=='__main__':
         plt.colorbar()
         plt.show()
 
+
     position_embedding = get_position_embedding(sentence_len=50, d_model=512)
     plot_position_embedding(position_embedding)
+
 
     # 测试：查看学习率变化曲线
     def plot_learning_rate_schedule(temp_learning_rate_schedule):
@@ -281,6 +281,7 @@ if __name__=='__main__':
         plt.ylabel("Learning Rate")
         plt.xlabel("Train Step")
         plt.show()
+
 
     temp_learning_rate_schedule = CustomSchedule(D_MODEL)
     plot_learning_rate_schedule(temp_learning_rate_schedule)
@@ -326,4 +327,3 @@ if __name__=='__main__':
     sample_ffn = feed_forward_network(512, 2048)
     # 给一个输入测试
     print(f"ffn output: {sample_ffn(tf.random.uniform((64, 50, 512))).shape}")
-

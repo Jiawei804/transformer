@@ -142,3 +142,7 @@ cython_debug/
 
 # 忽略测试文件
 test.py
+
+# 忽略训练权重文件
+checkpoints/
+py_checkpoints/

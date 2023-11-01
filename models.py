@@ -10,7 +10,6 @@ class EncoderLayer(keras.layers.Layer):
       -> feed_forward ->  add & normalize & dropout
     """
 
-
     def __init__(self, d_model, num_heads, dff, rate=0.1):
         """
 
@@ -35,19 +34,18 @@ class EncoderLayer(keras.layers.Layer):
         self.dropout1 = keras.layers.Dropout(rate)
         self.dropout2 = keras.layers.Dropout(rate)
 
-
     def call(self, x, training, encoder_padding_mask):
         # x.shape          : (batch_size, seq_len, dim=d_model)
         # attn_output.shape: (batch_size, seq_len, d_model)
         # out1.shape       : (batch_size, seq_len, d_model)
         # encoder模块里，x作为q，k，v
         attn_output, _ = self.mha(x, x, x, encoder_padding_mask)
-        attn_output = self.dropout1(attn_output, training = training)
+        attn_output = self.dropout1(attn_output, training=training)
         # 残差连接，dim 必须等于 d_model，才可以相加
         out1 = self.norm1(x + attn_output)
 
         ffn_output = self.ffn(out1)
-        ffn_output = self.dropout2(ffn_output, training = training)
+        ffn_output = self.dropout2(ffn_output, training=training)
         out2 = self.norm2(out1 + ffn_output)
 
         return out2
@@ -59,6 +57,7 @@ class DecoderLayer(keras.layers.Layer):
     out1, encoder_output -> attention -> add & normalization & dropout -> out2
     out2 -> ffn -> add & normalization & dropout -> out3
     """
+
     def __init__(self, d_model, num_heads, dff, rate=0.1):
         super().__init__()
 
@@ -86,7 +85,7 @@ class DecoderLayer(keras.layers.Layer):
 
         attn2, attn_weights2 = self.mha2(
             out1, encoding_outputs, encoding_outputs,
-                encoder_decoder_padding_mask)
+            encoder_decoder_padding_mask)
         attn2 = self.dropout2(attn2, training=training)
         out2 = self.norm2(attn2 + out1)
 
@@ -158,7 +157,7 @@ class DecoderModel(keras.layers.Layer):
 
         self.dropout = keras.layers.Dropout(rate)
         self.decoder_layers = [
-            DecoderLayer(d_model,num_heads,dff,rate)
+            DecoderLayer(d_model, num_heads, dff, rate)
             for _ in range(self.num_layers)
         ]
 
@@ -193,7 +192,7 @@ class DecoderModel(keras.layers.Layer):
                 decoder_mask, encoder_decoder_padding_mask
             )
             attention_weights[
-                'decoder_layer{}_att1'.format(i+1)]= attn1
+                'decoder_layer{}_att1'.format(i + 1)] = attn1
             attention_weights[
                 'decoder_layer{}_att2'.format(i + 1)] = attn2
 

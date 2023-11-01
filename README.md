@@ -53,6 +53,7 @@ protobuf==3.20.0是为了调整tensorflow和tensorflow-datasets的版本兼容�
 
 注释掉代码中训练的函数，运行main.py就可以快速启动体验了，权重在checkpoints文件夹中。
 
+* you can also use .ipynb to start quickly.
 ## 三、超参数调整
 
 #### settings.py
