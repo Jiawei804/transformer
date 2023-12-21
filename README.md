@@ -113,4 +113,4 @@ score = np.exp(0.25 * (np.log(8/9) + np.log(6/8) + np.log(5/7) + np.log(4/6)))
 print(score)
 # out:0.75
 ```
-[知乎文章]([https://www.zhihu.com/question/473208103/answer/3331617029](https://zhuanlan.zhihu.com/p/673135990)https://zhuanlan.zhihu.com/p/673135990)
+[知乎文章](https://zhuanlan.zhihu.com/p/673135990)
